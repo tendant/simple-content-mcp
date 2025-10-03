@@ -257,6 +257,116 @@ func (s *Server) registerTools() error {
 				},
 			},
 		},
+		{
+			Name:        "list_derived_content",
+			Description: "List derived content (thumbnails, previews) for a parent content",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"parent_id": map[string]interface{}{
+						"type":        "string",
+						"format":      "uuid",
+						"description": "Parent content ID",
+					},
+					"derivation_type": map[string]interface{}{
+						"type":        "string",
+						"description": "Filter by derivation type (thumbnail, preview, etc.)",
+					},
+					"variant": map[string]interface{}{
+						"type":        "string",
+						"description": "Filter by specific variant (thumbnail_256, etc.)",
+					},
+					"variants": map[string]interface{}{
+						"type": "array",
+						"items": map[string]interface{}{
+							"type": "string",
+						},
+						"description": "Filter by multiple variants",
+					},
+					"limit": map[string]interface{}{
+						"type":        "integer",
+						"description": "Maximum number of results",
+						"default":     50,
+					},
+					"offset": map[string]interface{}{
+						"type":        "integer",
+						"description": "Offset for pagination",
+						"default":     0,
+					},
+				},
+				"required": []string{"parent_id"},
+			},
+		},
+		{
+			Name:        "get_thumbnails",
+			Description: "Get thumbnails by size for an image (convenience wrapper)",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"parent_id": map[string]interface{}{
+						"type":        "string",
+						"format":      "uuid",
+						"description": "Parent image content ID",
+					},
+					"sizes": map[string]interface{}{
+						"type": "array",
+						"items": map[string]interface{}{
+							"type": "string",
+						},
+						"description": "Thumbnail sizes to retrieve (256, 512, 720, 1024). If omitted, returns all common sizes.",
+					},
+				},
+				"required": []string{"parent_id"},
+			},
+		},
+		{
+			Name:        "get_content_status",
+			Description: "Get content processing status and derived content availability",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"content_id": map[string]interface{}{
+						"type":        "string",
+						"format":      "uuid",
+						"description": "Content ID",
+					},
+				},
+				"required": []string{"content_id"},
+			},
+		},
+		{
+			Name:        "list_by_status",
+			Description: "List content by lifecycle status (for monitoring/workers)",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"status": map[string]interface{}{
+						"type": "string",
+						"enum": []string{
+							"created",
+							"uploading",
+							"uploaded",
+							"processing",
+							"processed",
+							"failed",
+							"archived",
+						},
+						"description": "Content status to filter by",
+					},
+					"owner_id": map[string]interface{}{
+						"type":        "string",
+						"format":      "uuid",
+						"description": "Optional: filter by owner ID",
+					},
+					"limit": map[string]interface{}{
+						"type":        "integer",
+						"description": "Maximum number of results",
+						"default":     100,
+					},
+				},
+				"required": []string{"status"},
+			},
+		},
 	}
 
 	// Register each tool with its handler
@@ -290,6 +400,14 @@ func (s *Server) getToolHandler(name string) mcp.ToolHandler {
 		return s.handleDeleteContent
 	case "search_content":
 		return s.handleSearchContent
+	case "list_derived_content":
+		return s.handleListDerivedContent
+	case "get_thumbnails":
+		return s.handleGetThumbnails
+	case "get_content_status":
+		return s.handleGetContentStatus
+	case "list_by_status":
+		return s.handleListByStatus
 	default:
 		return nil
 	}

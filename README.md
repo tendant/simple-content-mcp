@@ -8,7 +8,7 @@ This MCP server exposes all core content management operations from the `simple-
 
 ### Features
 
-- ✅ **8 Core MCP Tools** for content management
+- ✅ **12 MCP Tools** - 8 core + 2 derived content + 2 status monitoring
 - ✅ **stdio Transport** for local agent use
 - ✅ **In-memory Storage** for testing and development
 - ✅ **Type-safe** with JSON Schema validation
@@ -63,9 +63,9 @@ go build -o example main.go
 
 ## MCP Tools
 
-The server provides 8 core tools:
+The server provides 12 tools across 3 categories:
 
-### Content Management
+### Content Management (8 tools)
 1. **upload_content** - Upload content with data in a single operation
 2. **get_content** - Retrieve content metadata by ID
 3. **get_content_details** - Get complete information including URLs
@@ -74,6 +74,14 @@ The server provides 8 core tools:
 6. **update_content** - Update content metadata
 7. **delete_content** - Soft delete content
 8. **search_content** - Search by metadata, tags, or query
+
+### Derived Content (2 tools)
+9. **list_derived_content** - List derived content (thumbnails, previews) for a parent
+10. **get_thumbnails** - Get thumbnails by size (convenience wrapper)
+
+### Status Monitoring (2 tools)
+11. **get_content_status** - Check content processing status and derived content availability
+12. **list_by_status** - List content by lifecycle status (for monitoring/workers)
 
 ### Input Formats
 
@@ -165,8 +173,13 @@ config := mcpserver.DefaultConfig(service)
 - [x] Unit tests
 - [x] Example client
 
+### Phase 2 ✅ (Completed)
+- [x] Derived content tools (list_derived_content, get_thumbnails)
+- [x] Status monitoring tools (get_content_status, list_by_status)
+- [x] Unit tests for new tools
+- [x] Updated example demonstrations
+
 ### Future Phases
-- [ ] Phase 2: Derived content & status tools
 - [ ] Phase 3: Resources & prompts
 - [ ] Phase 4: Batch operations
 - [ ] Phase 5: Authentication, SSE/HTTP transports

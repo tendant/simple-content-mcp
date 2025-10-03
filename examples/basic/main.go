@@ -201,6 +201,84 @@ func main() {
 	deleteData := parseResult(deleteResult)
 	fmt.Printf("✓ Content deleted successfully at %s\n\n", deleteData["deleted_at"])
 
+	// Example 9: Get content status
+	fmt.Println("Example 9: Getting content status...")
+	// Upload a new content for status check
+	statusTestData := "Content for status check"
+	statusEncodedData := base64.StdEncoding.EncodeToString([]byte(statusTestData))
+	statusUploadResult, err := session.CallTool(ctx, &mcp.CallToolParams{
+		Name: "upload_content",
+		Arguments: map[string]interface{}{
+			"owner_id":  ownerID.String(),
+			"name":      "status-test.txt",
+			"data":      statusEncodedData,
+			"file_name": "status-test.txt",
+		},
+	})
+	if err != nil {
+		log.Fatalf("Status test upload failed: %v", err)
+	}
+
+	statusUploadData := parseResult(statusUploadResult)
+	statusContentID := statusUploadData["id"].(string)
+
+	statusResult, err := session.CallTool(ctx, &mcp.CallToolParams{
+		Name: "get_content_status",
+		Arguments: map[string]interface{}{
+			"content_id": statusContentID,
+		},
+	})
+	if err != nil {
+		log.Fatalf("Get status failed: %v", err)
+	}
+
+	statusData := parseResult(statusResult)
+	fmt.Printf("✓ Content status retrieved:\n")
+	fmt.Printf("  Status: %s\n", statusData["status"])
+	fmt.Printf("  Ready: %v\n", statusData["ready"])
+	fmt.Printf("  Has Thumbnails: %v\n", statusData["has_thumbnails"])
+	fmt.Printf("  Has Previews: %v\n\n", statusData["has_previews"])
+
+	// Example 10: List by status
+	fmt.Println("Example 10: Listing content by status...")
+	listStatusResult, err := session.CallTool(ctx, &mcp.CallToolParams{
+		Name: "list_by_status",
+		Arguments: map[string]interface{}{
+			"status":   "uploaded",
+			"owner_id": ownerID.String(),
+			"limit":    5,
+		},
+	})
+	if err != nil {
+		log.Fatalf("List by status failed: %v", err)
+	}
+
+	listStatusData := parseResult(listStatusResult)
+	statusItems := listStatusData["items"].([]interface{})
+	count := int(listStatusData["count"].(float64))
+	fmt.Printf("✓ Found %d uploaded items\n", count)
+	for i, item := range statusItems {
+		itemMap := item.(map[string]interface{})
+		fmt.Printf("  %d. %s (Status: %s)\n", i+1, itemMap["name"], itemMap["status"])
+	}
+	fmt.Println()
+
+	// Example 11: List derived content (empty for now)
+	fmt.Println("Example 11: Listing derived content...")
+	derivedResult, err := session.CallTool(ctx, &mcp.CallToolParams{
+		Name: "list_derived_content",
+		Arguments: map[string]interface{}{
+			"parent_id": statusContentID,
+		},
+	})
+	if err != nil {
+		log.Fatalf("List derived failed: %v", err)
+	}
+
+	derivedData := parseResult(derivedResult)
+	derivedItems := derivedData["items"].([]interface{})
+	fmt.Printf("✓ Found %d derived content items (thumbnails would appear here if generated)\n\n", len(derivedItems))
+
 	fmt.Println("=== All examples completed successfully! ===")
 }
 
