@@ -346,6 +346,58 @@ func main() {
 	}
 	fmt.Println()
 
+	// Example 14: Batch upload (Phase 4)
+	fmt.Println("Example 14: Batch uploading content...")
+	batchItems := []map[string]interface{}{
+		{
+			"name":      "batch-doc-1.txt",
+			"data":      base64.StdEncoding.EncodeToString([]byte("Batch document 1 content")),
+			"file_name": "batch-doc-1.txt",
+			"tags":      []string{"batch", "document"},
+		},
+		{
+			"name":      "batch-doc-2.txt",
+			"data":      base64.StdEncoding.EncodeToString([]byte("Batch document 2 content")),
+			"file_name": "batch-doc-2.txt",
+			"tags":      []string{"batch", "document"},
+		},
+		{
+			"name":      "batch-doc-3.txt",
+			"data":      base64.StdEncoding.EncodeToString([]byte("Batch document 3 content")),
+			"file_name": "batch-doc-3.txt",
+			"tags":      []string{"batch", "document"},
+		},
+		{
+			"name":      "batch-doc-4.txt",
+			"data":      base64.StdEncoding.EncodeToString([]byte("Batch document 4 content")),
+			"file_name": "batch-doc-4.txt",
+			"tags":      []string{"batch", "document"},
+		},
+		{
+			"name":      "batch-doc-5.txt",
+			"data":      base64.StdEncoding.EncodeToString([]byte("Batch document 5 content")),
+			"file_name": "batch-doc-5.txt",
+			"tags":      []string{"batch", "document"},
+		},
+	}
+
+	batchResult, err := session.CallTool(ctx, &mcp.CallToolParams{
+		Name: "batch_upload",
+		Arguments: map[string]interface{}{
+			"owner_id": ownerID.String(),
+			"items":    batchItems,
+		},
+	})
+	if err != nil {
+		log.Fatalf("Batch upload failed: %v", err)
+	}
+
+	batchData := parseResult(batchResult)
+	fmt.Printf("✓ Batch upload completed\n")
+	fmt.Printf("  Total: %v\n", batchData["total"])
+	fmt.Printf("  Successful: %v\n", batchData["successful"])
+	fmt.Printf("  Failed: %v\n\n", batchData["failed"])
+
 	fmt.Println("=== All examples completed successfully! ===")
 }
 

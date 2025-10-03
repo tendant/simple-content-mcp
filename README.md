@@ -8,9 +8,10 @@ This MCP server exposes all core content management operations from the `simple-
 
 ### Features
 
-- ✅ **12 MCP Tools** - 8 core + 2 derived content + 2 status monitoring
+- ✅ **14 MCP Tools** - 8 core + 2 derived + 2 status + 2 batch operations
 - ✅ **3 MCP Resources** - URI-addressable data (content, schema, stats)
 - ✅ **4 MCP Prompts** - Workflow guidance templates
+- ✅ **Batch Operations** - Upload/fetch multiple items in parallel
 - ✅ **stdio Transport** for local agent use
 - ✅ **In-memory Storage** for testing and development
 - ✅ **Type-safe** with JSON Schema validation
@@ -66,7 +67,7 @@ go build -o example main.go
 ## MCP Capabilities
 
 The server provides:
-- **12 Tools** - Actions for managing content
+- **14 Tools** - Actions for managing content (including batch operations)
 - **3 Resources** - URI-addressable data for agents
 - **4 Prompts** - Workflow guidance templates
 
@@ -89,6 +90,10 @@ The server provides:
 #### Status Monitoring (2 tools)
 11. **get_content_status** - Check content processing status and derived content availability
 12. **list_by_status** - List content by lifecycle status (for monitoring/workers)
+
+#### Batch Operations (2 tools)
+13. **batch_upload** - Upload multiple content items in parallel (up to MaxBatchSize)
+14. **batch_get_details** - Get details for multiple content IDs in parallel
 
 ### Resources
 
@@ -210,9 +215,16 @@ config := mcpserver.DefaultConfig(service)
 - [x] Unit tests for resources and prompts
 - [x] Updated example demonstrations
 
+### Phase 4 ✅ (Completed)
+- [x] Batch upload tool (parallel upload of multiple items)
+- [x] Batch get details tool (parallel fetch of multiple IDs)
+- [x] MaxBatchSize enforcement (config-based limits)
+- [x] Graceful error handling (partial failures reported)
+- [x] Unit tests for batch operations
+- [x] Updated example demonstrations
+
 ### Future Phases
-- [ ] Phase 4: Batch operations & advanced features
-- [ ] Phase 5: Authentication, SSE/HTTP transports
+- [ ] Phase 5: Production hardening (authentication, SSE/HTTP transports)
 
 ## Dependencies
 

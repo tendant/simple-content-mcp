@@ -367,6 +367,89 @@ func (s *Server) registerTools() error {
 				"required": []string{"status"},
 			},
 		},
+		{
+			Name:        "batch_upload",
+			Description: "Upload multiple content items in one operation",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"owner_id": map[string]interface{}{
+						"type":        "string",
+						"format":      "uuid",
+						"description": "Owner UUID for all items",
+					},
+					"tenant_id": map[string]interface{}{
+						"type":        "string",
+						"format":      "uuid",
+						"description": "Tenant UUID for all items (optional)",
+					},
+					"items": map[string]interface{}{
+						"type": "array",
+						"items": map[string]interface{}{
+							"type": "object",
+							"properties": map[string]interface{}{
+								"name": map[string]interface{}{
+									"type":        "string",
+									"description": "Content name",
+								},
+								"data": map[string]interface{}{
+									"type":        "string",
+									"description": "Base64 encoded data or URL",
+								},
+								"file_name": map[string]interface{}{
+									"type":        "string",
+									"description": "Original file name",
+								},
+								"description": map[string]interface{}{
+									"type":        "string",
+									"description": "Content description",
+								},
+								"document_type": map[string]interface{}{
+									"type":        "string",
+									"description": "MIME type",
+								},
+								"tags": map[string]interface{}{
+									"type": "array",
+									"items": map[string]interface{}{
+										"type": "string",
+									},
+									"description": "Tags for categorization",
+								},
+								"metadata": map[string]interface{}{
+									"type":        "object",
+									"description": "Custom metadata",
+								},
+								"storage_backend": map[string]interface{}{
+									"type":        "string",
+									"description": "Storage backend name",
+								},
+							},
+							"required": []string{"name", "data"},
+						},
+						"description": "Array of content items to upload",
+					},
+				},
+				"required": []string{"owner_id", "items"},
+			},
+		},
+		{
+			Name:        "batch_get_details",
+			Description: "Get details for multiple content IDs in parallel",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"content_ids": map[string]interface{}{
+						"type": "array",
+						"items": map[string]interface{}{
+							"type":   "string",
+							"format": "uuid",
+						},
+						"description": "Array of content IDs to fetch",
+					},
+				},
+				"required": []string{"content_ids"},
+			},
+		},
 	}
 
 	// Register each tool with its handler
@@ -408,6 +491,10 @@ func (s *Server) getToolHandler(name string) mcp.ToolHandler {
 		return s.handleGetContentStatus
 	case "list_by_status":
 		return s.handleListByStatus
+	case "batch_upload":
+		return s.handleBatchUpload
+	case "batch_get_details":
+		return s.handleBatchGetDetails
 	default:
 		return nil
 	}
