@@ -13,7 +13,8 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Simple Content MCP Client Example ===\n")
+	fmt.Println("=== Simple Content MCP Client Example ===")
+	fmt.Println()
 
 	// Create MCP client
 	client := mcp.NewClient(&mcp.Implementation{
@@ -34,7 +35,8 @@ func main() {
 	}
 	defer session.Close()
 
-	fmt.Println("Connected successfully!\n")
+	fmt.Println("Connected successfully!")
+	fmt.Println()
 
 	ctx := context.Background()
 	ownerID := uuid.New()
