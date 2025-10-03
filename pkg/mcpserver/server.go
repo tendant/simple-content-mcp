@@ -49,17 +49,17 @@ func New(config Config) (*Server, error) {
 		return nil, err
 	}
 
-	// TODO: Phase 3 - Register resources and prompts
-	// if config.EnableResources {
-	//     if err := s.registerResources(); err != nil {
-	//         return nil, err
-	//     }
-	// }
-	// if config.EnablePrompts {
-	//     if err := s.registerPrompts(); err != nil {
-	//         return nil, err
-	//     }
-	// }
+	// Phase 3 - Register resources and prompts
+	if config.EnableResources {
+		if err := s.registerResources(); err != nil {
+			return nil, err
+		}
+	}
+	if config.EnablePrompts {
+		if err := s.registerPrompts(); err != nil {
+			return nil, err
+		}
+	}
 
 	return s, nil
 }

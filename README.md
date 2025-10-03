@@ -9,6 +9,8 @@ This MCP server exposes all core content management operations from the `simple-
 ### Features
 
 - ✅ **12 MCP Tools** - 8 core + 2 derived content + 2 status monitoring
+- ✅ **3 MCP Resources** - URI-addressable data (content, schema, stats)
+- ✅ **4 MCP Prompts** - Workflow guidance templates
 - ✅ **stdio Transport** for local agent use
 - ✅ **In-memory Storage** for testing and development
 - ✅ **Type-safe** with JSON Schema validation
@@ -61,11 +63,16 @@ go build -o example main.go
 ./example
 ```
 
-## MCP Tools
+## MCP Capabilities
 
-The server provides 12 tools across 3 categories:
+The server provides:
+- **12 Tools** - Actions for managing content
+- **3 Resources** - URI-addressable data for agents
+- **4 Prompts** - Workflow guidance templates
 
-### Content Management (8 tools)
+### Tools
+
+#### Content Management (8 tools)
 1. **upload_content** - Upload content with data in a single operation
 2. **get_content** - Retrieve content metadata by ID
 3. **get_content_details** - Get complete information including URLs
@@ -75,13 +82,30 @@ The server provides 12 tools across 3 categories:
 7. **delete_content** - Soft delete content
 8. **search_content** - Search by metadata, tags, or query
 
-### Derived Content (2 tools)
+#### Derived Content (2 tools)
 9. **list_derived_content** - List derived content (thumbnails, previews) for a parent
 10. **get_thumbnails** - Get thumbnails by size (convenience wrapper)
 
-### Status Monitoring (2 tools)
+#### Status Monitoring (2 tools)
 11. **get_content_status** - Check content processing status and derived content availability
 12. **list_by_status** - List content by lifecycle status (for monitoring/workers)
+
+### Resources
+
+Resources are URI-addressable data that agents can read:
+
+1. **content://{id}** - Content metadata (template)
+2. **schema://content** - JSON schema for Content entity
+3. **stats://system** - System statistics and health
+
+### Prompts
+
+Prompts provide workflow guidance to agents:
+
+1. **upload-workflow** - Step-by-step guide for uploading content
+2. **search-workflow** - Guide for searching and filtering content
+3. **derived-content-workflow** - Guide for working with thumbnails/previews
+4. **status-monitoring** - Guide for monitoring content status
 
 ### Input Formats
 
@@ -179,9 +203,15 @@ config := mcpserver.DefaultConfig(service)
 - [x] Unit tests for new tools
 - [x] Updated example demonstrations
 
+### Phase 3 ✅ (Completed)
+- [x] MCP Resources (content://{id}, schema://content, stats://system)
+- [x] Resource templates with URI parameters
+- [x] MCP Prompts (4 workflow guides)
+- [x] Unit tests for resources and prompts
+- [x] Updated example demonstrations
+
 ### Future Phases
-- [ ] Phase 3: Resources & prompts
-- [ ] Phase 4: Batch operations
+- [ ] Phase 4: Batch operations & advanced features
 - [ ] Phase 5: Authentication, SSE/HTTP transports
 
 ## Dependencies

@@ -279,6 +279,73 @@ func main() {
 	derivedItems := derivedData["items"].([]interface{})
 	fmt.Printf("✓ Found %d derived content items (thumbnails would appear here if generated)\n\n", len(derivedItems))
 
+	// Example 12: Read a resource (Phase 3)
+	fmt.Println("Example 12: Reading MCP resources...")
+	// Read content as a resource
+	resourceResult, err := session.ReadResource(ctx, &mcp.ReadResourceParams{
+		URI: "content://" + statusContentID,
+	})
+	if err != nil {
+		log.Fatalf("Read resource failed: %v", err)
+	}
+	fmt.Printf("✓ Read resource: %s\n", resourceResult.Contents[0].URI)
+	fmt.Printf("  MIME Type: %s\n\n", resourceResult.Contents[0].MIMEType)
+
+	// Read schema resource
+	schemaResult, err := session.ReadResource(ctx, &mcp.ReadResourceParams{
+		URI: "schema://content",
+	})
+	if err != nil {
+		log.Fatalf("Read schema resource failed: %v", err)
+	}
+	fmt.Printf("✓ Read schema resource\n")
+	fmt.Printf("  MIME Type: %s\n\n", schemaResult.Contents[0].MIMEType)
+
+	// Read stats resource
+	statsResult, err := session.ReadResource(ctx, &mcp.ReadResourceParams{
+		URI: "stats://system",
+	})
+	if err != nil {
+		log.Fatalf("Read stats resource failed: %v", err)
+	}
+	fmt.Printf("✓ Read system stats resource\n")
+	fmt.Printf("  Content: %s\n\n", statsResult.Contents[0].Text[:100]+"...")
+
+	// Example 13: Get a prompt (Phase 3)
+	fmt.Println("Example 13: Getting MCP prompts...")
+	promptResult, err := session.GetPrompt(ctx, &mcp.GetPromptParams{
+		Name: "upload-workflow",
+		Arguments: map[string]string{
+			"content_type": "image",
+		},
+	})
+	if err != nil {
+		log.Fatalf("Get prompt failed: %v", err)
+	}
+	fmt.Printf("✓ Retrieved upload-workflow prompt\n")
+	if len(promptResult.Messages) > 0 {
+		textContent, ok := promptResult.Messages[0].Content.(*mcp.TextContent)
+		if ok {
+			// Show first 200 chars of the guidance
+			guidance := textContent.Text
+			if len(guidance) > 200 {
+				guidance = guidance[:200] + "..."
+			}
+			fmt.Printf("  Guidance: %s\n\n", guidance)
+		}
+	}
+
+	// List all available prompts
+	promptsList, err := session.ListPrompts(ctx, &mcp.ListPromptsParams{})
+	if err != nil {
+		log.Fatalf("List prompts failed: %v", err)
+	}
+	fmt.Printf("✓ Available prompts:\n")
+	for _, prompt := range promptsList.Prompts {
+		fmt.Printf("  - %s: %s\n", prompt.Name, prompt.Description)
+	}
+	fmt.Println()
+
 	fmt.Println("=== All examples completed successfully! ===")
 }
 

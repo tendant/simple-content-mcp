@@ -53,8 +53,8 @@ func DefaultConfig(service simplecontent.Service) Config {
 		MaxBatchSize:    100,
 		DefaultPageSize: 50,
 		MaxPageSize:     1000,
-		EnableResources: false, // Disabled for Phase 1
-		EnablePrompts:   false, // Disabled for Phase 1
+		EnableResources: true, // Phase 3
+		EnablePrompts:   true, // Phase 3
 	}
 }
 
