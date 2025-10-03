@@ -15,6 +15,30 @@ Phase 5 adds authentication support to the MCP server, allowing you to secure yo
 
 ### Enabling Authentication
 
+You can configure authentication using environment variables or a `.env` file.
+
+#### Using .env File (Recommended)
+
+```bash
+# Copy example configuration
+cp .env.example .env
+
+# Edit .env file
+# nano .env
+```
+
+Add to your `.env` file:
+```bash
+# Enable authentication
+MCP_AUTH_ENABLED=true
+
+# Add API keys (format: key:owner_id:tenant_id:expires_at)
+MCP_API_KEY_1=mykey123:550e8400-e29b-41d4-a716-446655440000::
+MCP_API_KEY_2=anotherkey:660e8400-e29b-41d4-a716-446655440001::
+```
+
+#### Using Environment Variables
+
 ```bash
 # Enable authentication
 export MCP_AUTH_ENABLED=true

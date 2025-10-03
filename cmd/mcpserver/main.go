@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/joho/godotenv"
 	"github.com/tendant/simple-content-mcp/pkg/mcpserver"
 	"github.com/tendant/simple-content/pkg/simplecontent"
 	memoryrepo "github.com/tendant/simple-content/pkg/simplecontent/repo/memory"
@@ -16,13 +17,30 @@ import (
 )
 
 func main() {
+	// Load .env file if it exists (ignore error if file doesn't exist)
+	if err := godotenv.Load(); err != nil {
+		// Only log if error is not "file not found"
+		if !os.IsNotExist(err) {
+			log.Printf("Warning: Error loading .env file: %v", err)
+		}
+	}
+
 	// Parse command-line flags
 	var (
 		mode    = flag.String("mode", "stdio", "Transport mode: stdio, sse, http")
 		port    = flag.Int("port", 8080, "Port for SSE/HTTP mode")
 		version = flag.Bool("version", false, "Print version and exit")
+		envFile = flag.String("env", "", "Path to .env file (default: .env in current directory)")
 	)
 	flag.Parse()
+
+	// Load custom .env file if specified
+	if *envFile != "" {
+		if err := godotenv.Load(*envFile); err != nil {
+			log.Fatalf("Error loading env file %s: %v", *envFile, err)
+		}
+		log.Printf("Loaded configuration from %s", *envFile)
+	}
 
 	if *version {
 		fmt.Println("simple-content-mcp v0.1.0")

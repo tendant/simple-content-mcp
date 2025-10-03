@@ -46,11 +46,39 @@ This MCP server exposes all core content management operations from the `simple-
 go build -o mcpserver ./cmd/mcpserver
 ```
 
+### Configuration with .env File
+
+For easier testing and development, you can use a `.env` file:
+
+```bash
+# Copy the example configuration
+cp .env.example .env
+
+# Edit .env with your settings
+# The server automatically loads .env on startup
+
+# Run the server
+./mcpserver
+```
+
+You can also specify a custom env file:
+
+```bash
+# Use a specific env file
+./mcpserver --env=.env.production --mode=sse --port=8080
+```
+
 ### Run the Server
 
 ```bash
 # Run in stdio mode (default)
 ./mcpserver --mode=stdio
+
+# Run with .env file (auto-loaded)
+./mcpserver
+
+# Run with custom env file
+./mcpserver --env=.env.production
 
 # Show version
 ./mcpserver --version
@@ -270,6 +298,7 @@ config.Authenticator = auth.NewAPIKeyAuthenticator()
 - [MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk) v1.0.0
 - [simple-content](https://github.com/tendant/simple-content) v0.1.23
 - [google/uuid](https://github.com/google/uuid) v1.6.0
+- [godotenv](https://github.com/joho/godotenv) v1.5.1 - Environment configuration
 
 ## License
 
