@@ -43,17 +43,27 @@ func main() {
 	}()
 
 	// Initialize simple-content service
-	// For Phase 1, we use in-memory implementations for testing
-	// In production, you would configure PostgreSQL and S3/filesystem storage
-	service, err := createService()
+	// Try to load from environment first, fallback to in-memory
+	service, err := CreateServiceFromEnv()
 	if err != nil {
-		log.Fatalf("Failed to create service: %v", err)
+		log.Printf("Warning: Failed to load service from environment: %v", err)
+		log.Println("Falling back to in-memory service...")
+		service, err = createService()
+		if err != nil {
+			log.Fatalf("Failed to create service: %v", err)
+		}
 	}
 
-	// Create MCP server configuration
-	config := mcpserver.DefaultConfig(service)
-	config.Mode = mcpserver.TransportMode(*mode)
-	config.Port = *port
+	// Create MCP server configuration from environment
+	config := LoadConfigFromEnv(service)
+
+	// Override with command-line flags if provided
+	if *mode != "stdio" {
+		config.Mode = mcpserver.TransportMode(*mode)
+	}
+	if *port != 8080 {
+		config.Port = *port
+	}
 
 	// Create and start MCP server
 	server, err := mcpserver.New(config)

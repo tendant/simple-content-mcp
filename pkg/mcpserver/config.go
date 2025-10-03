@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"github.com/tendant/simple-content/pkg/simplecontent"
+	"github.com/tendant/simple-content-mcp/pkg/mcpserver/auth"
 )
 
 // TransportMode defines the MCP transport protocol
@@ -39,6 +40,10 @@ type Config struct {
 	// Feature flags
 	EnableResources bool // Enable MCP resources (Phase 3)
 	EnablePrompts   bool // Enable MCP prompts (Phase 3)
+
+	// Authentication settings (Phase 5)
+	AuthEnabled     bool              // Enable authentication
+	Authenticator   auth.Authenticator // Authenticator implementation
 }
 
 // DefaultConfig returns a configuration with sensible defaults
@@ -53,8 +58,10 @@ func DefaultConfig(service simplecontent.Service) Config {
 		MaxBatchSize:    100,
 		DefaultPageSize: 50,
 		MaxPageSize:     1000,
-		EnableResources: true, // Phase 3
-		EnablePrompts:   true, // Phase 3
+		EnableResources: true,  // Phase 3
+		EnablePrompts:   true,  // Phase 3
+		AuthEnabled:     false, // Phase 5 - disabled by default
+		Authenticator:   nil,   // Phase 5 - must be set if AuthEnabled
 	}
 }
 
@@ -86,6 +93,11 @@ func (c *Config) Validate() error {
 
 	if c.DefaultPageSize > c.MaxPageSize {
 		return &ConfigError{Field: "DefaultPageSize", Message: "cannot be greater than MaxPageSize"}
+	}
+
+	// Validate authentication configuration
+	if c.AuthEnabled && c.Authenticator == nil {
+		return &ConfigError{Field: "Authenticator", Message: "authenticator is required when AuthEnabled is true"}
 	}
 
 	return nil

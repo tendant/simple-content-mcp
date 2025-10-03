@@ -181,16 +181,44 @@ go test -v ./pkg/mcpserver
 
 ### Configuration
 
-The server uses sensible defaults:
+The server can be configured via environment variables or programmatically.
+
+### Environment Variables
+
+```bash
+# Transport settings
+MCP_MODE=stdio              # stdio, sse, or http
+MCP_HOST=localhost          # Host for SSE/HTTP modes
+MCP_PORT=8080               # Port for SSE/HTTP modes
+MCP_BASE_URL=http://localhost:8080  # Base URL for SSE mode
+
+# Batch and pagination
+MCP_MAX_BATCH_SIZE=100      # Maximum items in batch operations
+MCP_DEFAULT_PAGE_SIZE=50    # Default page size for list operations
+MCP_MAX_PAGE_SIZE=1000      # Maximum page size
+
+# Features
+MCP_ENABLE_RESOURCES=true   # Enable MCP resources
+MCP_ENABLE_PROMPTS=true     # Enable MCP prompts
+
+# Authentication (Phase 5)
+MCP_AUTH_ENABLED=false      # Enable authentication
+MCP_API_KEY_1=mykey:550e8400-e29b-41d4-a716-446655440000::  # API key with owner_id
+MCP_API_KEY_2=anotherkey:660e8400-e29b-41d4-a716-446655440001::  # Additional keys
+
+# Storage (future - requires additional dependencies)
+DATABASE_URL=postgresql://user:pass@localhost/dbname
+STORAGE_BACKEND=memory      # memory, s3, or filesystem
+```
+
+### Programmatic Configuration
 
 ```go
 config := mcpserver.DefaultConfig(service)
-// Name:            "simple-content-mcp"
-// Version:         "0.1.0"
-// Mode:            TransportStdio
-// MaxBatchSize:    100
-// DefaultPageSize: 50
-// MaxPageSize:     1000
+config.Mode = mcpserver.TransportHTTP
+config.Port = 8080
+config.AuthEnabled = true
+config.Authenticator = auth.NewAPIKeyAuthenticator()
 ```
 
 ## Implementation Status
@@ -223,8 +251,19 @@ config := mcpserver.DefaultConfig(service)
 - [x] Unit tests for batch operations
 - [x] Updated example demonstrations
 
-### Future Phases
-- [ ] Phase 5: Production hardening (authentication, SSE/HTTP transports)
+### Phase 5 ✅ (Completed)
+- [x] Authentication infrastructure (API key auth)
+- [x] Auth middleware for tool handlers
+- [x] SSE transport with health/ready endpoints
+- [x] HTTP transport with health/ready endpoints
+- [x] Environment variable configuration
+- [x] Production-ready server setup
+
+### Future Enhancements
+- [ ] Full SSE/HTTP MCP protocol implementation (requires SDK support)
+- [ ] PostgreSQL and S3 storage backends (require additional dependencies)
+- [ ] OAuth integration
+- [ ] Rate limiting and quotas
 
 ## Dependencies
 

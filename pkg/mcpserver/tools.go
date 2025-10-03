@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/tendant/simple-content-mcp/pkg/mcpserver/auth"
 )
 
 // registerTools registers all MCP tools with the server
@@ -458,6 +459,12 @@ func (s *Server) registerTools() error {
 		if handler == nil {
 			return &ConfigError{Field: "tools", Message: "no handler for tool: " + tool.Name}
 		}
+
+		// Wrap handler with auth middleware if authentication is enabled
+		if s.config.AuthEnabled && s.config.Authenticator != nil {
+			handler = auth.Middleware(s.config.Authenticator, handler)
+		}
+
 		s.mcpServer.AddTool(tool, handler)
 	}
 

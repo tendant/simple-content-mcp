@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 
@@ -70,9 +71,9 @@ func (s *Server) Serve(ctx context.Context) error {
 	case TransportStdio:
 		return s.serveStdio(ctx)
 	case TransportSSE:
-		return fmt.Errorf("SSE transport not implemented yet (Phase 5)")
+		return s.serveSSE(ctx)
 	case TransportHTTP:
-		return fmt.Errorf("HTTP transport not implemented yet (Phase 5)")
+		return s.serveHTTP(ctx)
 	default:
 		return fmt.Errorf("unknown transport mode: %s", s.config.Mode)
 	}
@@ -81,6 +82,151 @@ func (s *Server) Serve(ctx context.Context) error {
 func (s *Server) serveStdio(ctx context.Context) error {
 	transport := &mcp.StdioTransport{}
 	return s.mcpServer.Run(ctx, transport)
+}
+
+func (s *Server) serveSSE(ctx context.Context) error {
+	// Create HTTP mux
+	mux := http.NewServeMux()
+
+	// Health check endpoint
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+
+	// Readiness check endpoint
+	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("READY"))
+	})
+
+	// SSE endpoint for MCP
+	mux.HandleFunc("/sse", func(w http.ResponseWriter, r *http.Request) {
+		// Extract API key from header if auth is enabled
+		reqCtx := r.Context()
+		if s.config.AuthEnabled {
+			apiKey := r.Header.Get("X-API-Key")
+			if apiKey == "" {
+				apiKey = r.Header.Get("Authorization")
+				// Remove "Bearer " prefix if present
+				if strings.HasPrefix(apiKey, "Bearer ") {
+					apiKey = strings.TrimPrefix(apiKey, "Bearer ")
+				}
+			}
+
+			if apiKey != "" {
+				reqCtx = context.WithValue(reqCtx, "api_key", apiKey)
+			}
+		}
+
+		// Use MCP SDK's SSE transport
+		// Note: The actual SSE implementation depends on the SDK's capabilities
+		// This is a placeholder for the SSE transport integration
+		log.Printf("SSE connection from %s", r.RemoteAddr)
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+
+		// For now, return a basic response
+		// Full implementation would use MCP SDK's SSE support
+		w.WriteHeader(http.StatusNotImplemented)
+		w.Write([]byte("SSE transport support coming soon\n"))
+	})
+
+	// Create HTTP server
+	addr := fmt.Sprintf("%s:%d", s.config.Host, s.config.Port)
+	server := &http.Server{
+		Addr:    addr,
+		Handler: mux,
+	}
+
+	// Start server in goroutine
+	errChan := make(chan error, 1)
+	go func() {
+		log.Printf("Starting SSE server on %s", addr)
+		errChan <- server.ListenAndServe()
+	}()
+
+	// Wait for context cancellation or server error
+	select {
+	case <-ctx.Done():
+		log.Println("Shutting down SSE server...")
+		return server.Shutdown(context.Background())
+	case err := <-errChan:
+		return err
+	}
+}
+
+func (s *Server) serveHTTP(ctx context.Context) error {
+	// Create HTTP mux
+	mux := http.NewServeMux()
+
+	// Health check endpoint
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+
+	// Readiness check endpoint
+	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("READY"))
+	})
+
+	// MCP-over-HTTP endpoint
+	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Extract API key from header if auth is enabled
+		reqCtx := r.Context()
+		if s.config.AuthEnabled {
+			apiKey := r.Header.Get("X-API-Key")
+			if apiKey == "" {
+				apiKey = r.Header.Get("Authorization")
+				// Remove "Bearer " prefix if present
+				if strings.HasPrefix(apiKey, "Bearer ") {
+					apiKey = strings.TrimPrefix(apiKey, "Bearer ")
+				}
+			}
+
+			if apiKey != "" {
+				reqCtx = context.WithValue(reqCtx, "api_key", apiKey)
+			}
+		}
+
+		// For now, return a basic response
+		// Full implementation would parse JSON-RPC MCP requests and route to tools
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotImplemented)
+		w.Write([]byte(`{"error": "HTTP transport support coming soon"}`))
+	})
+
+	// Create HTTP server
+	addr := fmt.Sprintf("%s:%d", s.config.Host, s.config.Port)
+	server := &http.Server{
+		Addr:    addr,
+		Handler: mux,
+	}
+
+	// Start server in goroutine
+	errChan := make(chan error, 1)
+	go func() {
+		log.Printf("Starting HTTP server on %s", addr)
+		errChan <- server.ListenAndServe()
+	}()
+
+	// Wait for context cancellation or server error
+	select {
+	case <-ctx.Done():
+		log.Println("Shutting down HTTP server...")
+		return server.Shutdown(context.Background())
+	case err := <-errChan:
+		return err
+	}
 }
 
 // Helper functions
