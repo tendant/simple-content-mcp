@@ -97,6 +97,56 @@ go build -o example main.go
 ./example
 ```
 
+### Test with Claude Desktop
+
+To use this MCP server with Claude Desktop:
+
+1. **Build the server**:
+   ```bash
+   go build -o mcpserver ./cmd/mcpserver
+   ```
+
+2. **Configure Claude Desktop** by editing the MCP configuration file:
+   - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - **Windows**: `%APPDATA%/Claude/claude_desktop_config.json`
+
+3. **Add your server configuration**:
+   ```json
+   {
+     "mcpServers": {
+       "simple-content": {
+         "command": "/absolute/path/to/simple-content-mcp/mcpserver",
+         "args": [],
+         "env": {
+           "DATABASE_URL": "postgresql://user:pass@localhost:5432/dbname?sslmode=disable&search_path=content",
+           "STORAGE_BACKEND": "filesystem",
+           "STORAGE_PATH": "/absolute/path/to/storage",
+           "MCP_REQUIRE_OWNER_ID": "false"
+         }
+       }
+     }
+   }
+   ```
+
+4. **Restart Claude Desktop** completely (quit and reopen)
+
+5. **Test the connection**:
+   - Start a new conversation in Claude Desktop
+   - Try: "List all available content" or "What MCP tools are available?"
+   - The server tools should be automatically discovered and usable
+
+**Example Queries for Testing**:
+- `"List all content"` - Lists all content (when `MCP_REQUIRE_OWNER_ID=false`)
+- `"Upload a test file"` - Tests content upload
+- `"Show content statistics"` - Access stats://system resource
+- `"Search for images"` - Test search functionality
+
+**Configuration Notes**:
+- Use **absolute paths** for `command`, `STORAGE_PATH`, etc.
+- Set `MCP_REQUIRE_OWNER_ID=false` for admin mode (lists all content)
+- Set `MCP_REQUIRE_OWNER_ID=true` or omit to require owner_id parameter
+- Environment variables in the config override `.env` file settings
+
 ## MCP Capabilities
 
 The server provides:
