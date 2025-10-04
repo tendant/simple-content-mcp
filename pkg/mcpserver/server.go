@@ -14,15 +14,17 @@ import (
 	"github.com/google/uuid"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/tendant/simple-content/pkg/simplecontent"
+	"github.com/tendant/simple-content/pkg/simplecontent/admin"
 
 	mcperrors "github.com/tendant/simple-content-mcp/pkg/mcpserver/errors"
 )
 
 // Server wraps a simple-content Service and exposes it via MCP
 type Server struct {
-	service   simplecontent.Service
-	mcpServer *mcp.Server
-	config    Config
+	service      simplecontent.Service
+	adminService admin.AdminService // Optional: for admin operations
+	mcpServer    *mcp.Server
+	config       Config
 }
 
 // New creates a new MCP server
@@ -33,8 +35,9 @@ func New(config Config) (*Server, error) {
 	}
 
 	s := &Server{
-		service: config.Service,
-		config:  config,
+		service:      config.Service,
+		adminService: config.AdminService,
+		config:       config,
 	}
 
 	// Create MCP server

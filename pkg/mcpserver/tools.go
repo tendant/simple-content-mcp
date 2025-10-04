@@ -7,6 +7,16 @@ import (
 
 // registerTools registers all MCP tools with the server
 func (s *Server) registerTools() error {
+	// Build list_content tool schema based on RequireOwnerID config
+	listContentRequired := []string{}
+	listContentDesc := "List content with filtering and pagination"
+	ownerIDDesc := "Filter by owner ID"
+	if s.config.RequireOwnerID {
+		listContentRequired = []string{"owner_id"}
+		listContentDesc = "List content with filtering and pagination. Note: owner_id is required to list content."
+		ownerIDDesc = "Filter by owner ID (required)"
+	}
+
 	// Define all tools with their schemas
 	tools := []*mcp.Tool{
 		{
@@ -102,14 +112,14 @@ func (s *Server) registerTools() error {
 		},
 		{
 			Name:        "list_content",
-			Description: "List content with filtering and pagination",
+			Description: listContentDesc,
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
 					"owner_id": map[string]interface{}{
 						"type":        "string",
 						"format":      "uuid",
-						"description": "Filter by owner ID",
+						"description": ownerIDDesc,
 					},
 					"tenant_id": map[string]interface{}{
 						"type":        "string",
@@ -139,6 +149,7 @@ func (s *Server) registerTools() error {
 						"default":     0,
 					},
 				},
+				"required": listContentRequired,
 			},
 		},
 		{

@@ -8,8 +8,10 @@ import (
 	"io"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/tendant/simple-content/pkg/simplecontent"
+	"github.com/tendant/simple-content/pkg/simplecontent/admin"
 
 	mcperrors "github.com/tendant/simple-content-mcp/pkg/mcpserver/errors"
 )
@@ -160,56 +162,86 @@ func (s *Server) handleListContent(ctx context.Context, req *mcp.CallToolRequest
 		return nil, mcperrors.NewValidationError("arguments", err)
 	}
 
-	// Build request
-	// Note: ListContentRequest only supports OwnerID and TenantID filtering
-	// For more advanced filtering, we'd need to use admin operations
-	listReq := simplecontent.ListContentRequest{}
-
-	if ownerID, err := parseUUID(params["owner_id"]); err == nil {
-		listReq.OwnerID = ownerID
-	}
-
-	if tenantID, err := parseUUID(params["tenant_id"]); err == nil {
-		listReq.TenantID = tenantID
-	}
-
-	// Call service
-	contents, err := s.service.ListContent(ctx, listReq)
-	if err != nil {
-		return nil, s.mapError(err)
-	}
+	var contents []*simplecontent.Content
+	var err error
 
 	// Get pagination parameters
 	limit := getIntOr(params, "limit", s.config.DefaultPageSize)
 	offset := getIntOr(params, "offset", 0)
 
-	// Apply client-side filtering for status and tags since ListContent doesn't support them
-	filtered := contents
-	if statusStr := getStringOr(params, "status", ""); statusStr != "" {
-		temp := make([]*simplecontent.Content, 0)
-		for _, c := range filtered {
-			if string(c.Status) == statusStr {
-				temp = append(temp, c)
-			}
+	// Use admin service if RequireOwnerID is false and admin service is available
+	if !s.config.RequireOwnerID && s.adminService != nil {
+		// Build filters for admin operations
+		filters := admin.ContentFilters{
+			Limit:  &limit,
+			Offset: &offset,
 		}
-		filtered = temp
+
+		if ownerID, err := parseUUID(params["owner_id"]); err == nil && ownerID != uuid.Nil {
+			filters.OwnerID = &ownerID
+		}
+
+		if tenantID, err := parseUUID(params["tenant_id"]); err == nil && tenantID != uuid.Nil {
+			filters.TenantID = &tenantID
+		}
+
+		if statusStr := getStringOr(params, "status", ""); statusStr != "" {
+			filters.Status = &statusStr
+		}
+
+		// Call admin list
+		req := admin.ListContentsRequest{
+			Filters: filters,
+		}
+		resp, err := s.adminService.ListAllContents(ctx, req)
+		if err != nil {
+			return nil, s.mapError(err)
+		}
+		contents = resp.Contents
+	} else {
+		// Use standard service method (requires owner_id)
+		listReq := simplecontent.ListContentRequest{}
+
+		if ownerID, err := parseUUID(params["owner_id"]); err == nil {
+			listReq.OwnerID = ownerID
+		}
+
+		if tenantID, err := parseUUID(params["tenant_id"]); err == nil {
+			listReq.TenantID = tenantID
+		}
+
+		// Call service
+		contents, err = s.service.ListContent(ctx, listReq)
+		if err != nil {
+			return nil, s.mapError(err)
+		}
+
+		// Apply client-side filtering for status since ListContent doesn't support it
+		if statusStr := getStringOr(params, "status", ""); statusStr != "" {
+			temp := make([]*simplecontent.Content, 0)
+			for _, c := range contents {
+				if string(c.Status) == statusStr {
+					temp = append(temp, c)
+				}
+			}
+			contents = temp
+		}
 	}
 
-	if tags := getStringSlice(params, "tags"); len(tags) > 0 {
-		// This is a simple implementation - would need GetContentMetadata for proper tag filtering
-		// For now, skip tag filtering as it requires additional service calls
+	// Apply client-side pagination only for standard service method
+	// (admin service already handled pagination)
+	pagedContents := contents
+	if s.config.RequireOwnerID || s.adminService == nil {
+		start := offset
+		end := offset + limit
+		if start > len(contents) {
+			start = len(contents)
+		}
+		if end > len(contents) {
+			end = len(contents)
+		}
+		pagedContents = contents[start:end]
 	}
-
-	// Apply pagination
-	start := offset
-	end := offset + limit
-	if start > len(filtered) {
-		start = len(filtered)
-	}
-	if end > len(filtered) {
-		end = len(filtered)
-	}
-	pagedContents := filtered[start:end]
 
 	// Format results
 	items := make([]map[string]interface{}, len(pagedContents))
@@ -229,7 +261,7 @@ func (s *Server) handleListContent(ctx context.Context, req *mcp.CallToolRequest
 
 	return newTextResult(formatJSON(map[string]interface{}{
 		"items":  items,
-		"total":  len(filtered),
+		"total":  len(contents),
 		"limit":  limit,
 		"offset": offset,
 	})), nil

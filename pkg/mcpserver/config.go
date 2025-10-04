@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"github.com/tendant/simple-content/pkg/simplecontent"
+	"github.com/tendant/simple-content/pkg/simplecontent/admin"
 	"github.com/tendant/simple-content-mcp/pkg/mcpserver/auth"
 )
 
@@ -20,7 +21,8 @@ const (
 // Config holds server configuration
 type Config struct {
 	// Core dependencies
-	Service simplecontent.Service
+	Service      simplecontent.Service
+	AdminService admin.AdminService // Optional: for admin operations (list all content, etc.)
 
 	// Server settings
 	Name    string
@@ -41,9 +43,12 @@ type Config struct {
 	EnableResources bool // Enable MCP resources (Phase 3)
 	EnablePrompts   bool // Enable MCP prompts (Phase 3)
 
+	// List content settings
+	RequireOwnerID bool // Require owner_id for list_content tool
+
 	// Authentication settings (Phase 5)
-	AuthEnabled     bool              // Enable authentication
-	Authenticator   auth.Authenticator // Authenticator implementation
+	AuthEnabled   bool               // Enable authentication
+	Authenticator auth.Authenticator // Authenticator implementation
 }
 
 // DefaultConfig returns a configuration with sensible defaults
@@ -60,6 +65,7 @@ func DefaultConfig(service simplecontent.Service) Config {
 		MaxPageSize:     1000,
 		EnableResources: true,  // Phase 3
 		EnablePrompts:   true,  // Phase 3
+		RequireOwnerID:  true,  // Require owner_id for list_content by default
 		AuthEnabled:     false, // Phase 5 - disabled by default
 		Authenticator:   nil,   // Phase 5 - must be set if AuthEnabled
 	}

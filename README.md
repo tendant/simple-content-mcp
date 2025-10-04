@@ -111,6 +111,8 @@ The server provides:
 2. **get_content** - Retrieve content metadata by ID
 3. **get_content_details** - Get complete information including URLs
 4. **list_content** - List content with filtering and pagination
+   - **Admin Mode**: Set `MCP_REQUIRE_OWNER_ID=false` to list all content without owner_id filter (uses AdminService)
+   - **Standard Mode**: Requires owner_id parameter (default behavior)
 5. **download_content** - Download content (URL or base64)
 6. **update_content** - Update content metadata
 7. **delete_content** - Soft delete content
@@ -233,6 +235,7 @@ MCP_MAX_PAGE_SIZE=1000      # Maximum page size
 # Features
 MCP_ENABLE_RESOURCES=true   # Enable MCP resources
 MCP_ENABLE_PROMPTS=true     # Enable MCP prompts
+MCP_REQUIRE_OWNER_ID=true   # Require owner_id for list_content (default: true, set false for admin mode)
 
 # Authentication (Phase 5)
 MCP_AUTH_ENABLED=false      # Enable authentication
@@ -252,6 +255,39 @@ config.Mode = mcpserver.TransportHTTP
 config.Port = 8080
 config.AuthEnabled = true
 config.Authenticator = auth.NewAPIKeyAuthenticator()
+config.RequireOwnerID = false  // Enable admin mode
+```
+
+## Admin Mode
+
+The `list_content` tool supports two modes of operation:
+
+### Standard Mode (Default)
+- Requires `owner_id` parameter in all list requests
+- Uses the standard `Service.ListContent()` method
+- Respects tenant/owner boundaries
+- Set `MCP_REQUIRE_OWNER_ID=true` (or omit, as this is the default)
+
+### Admin Mode
+- Allows listing all content without owner_id restrictions
+- Uses `AdminService.ListAllContents()` from the admin package
+- Supports advanced filtering (status, tenant_id, owner_id, etc.)
+- Pagination handled at the service level
+- Set `MCP_REQUIRE_OWNER_ID=false`
+
+**Security Note**: Admin mode bypasses normal owner/tenant restrictions. Only enable this in trusted environments or with proper authentication enabled (`MCP_AUTH_ENABLED=true`).
+
+**Example Configuration for Admin Mode**:
+```bash
+# .env
+DATABASE_URL=postgresql://user:pass@localhost:5432/dbname?search_path=content
+MCP_REQUIRE_OWNER_ID=false
+STORAGE_BACKEND=filesystem
+STORAGE_PATH=/path/to/storage
+
+# Optional: Enable authentication for security
+MCP_AUTH_ENABLED=true
+MCP_API_KEY_1=admin-key:00000000-0000-0000-0000-000000000000::
 ```
 
 ## Implementation Status

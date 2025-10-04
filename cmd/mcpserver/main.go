@@ -12,6 +12,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/tendant/simple-content-mcp/pkg/mcpserver"
 	"github.com/tendant/simple-content/pkg/simplecontent"
+	"github.com/tendant/simple-content/pkg/simplecontent/admin"
 	memoryrepo "github.com/tendant/simple-content/pkg/simplecontent/repo/memory"
 	memorystorage "github.com/tendant/simple-content/pkg/simplecontent/storage/memory"
 )
@@ -62,11 +63,11 @@ func main() {
 
 	// Initialize simple-content service
 	// Try to load from environment first, fallback to in-memory
-	service, err := CreateServiceFromEnv()
+	service, repo, err := CreateServiceFromEnv()
 	if err != nil {
 		log.Printf("Warning: Failed to load service from environment: %v", err)
 		log.Println("Falling back to in-memory service...")
-		service, err = createService()
+		service, repo, err = createService()
 		if err != nil {
 			log.Fatalf("Failed to create service: %v", err)
 		}
@@ -74,6 +75,11 @@ func main() {
 
 	// Create MCP server configuration from environment
 	config := LoadConfigFromEnv(service)
+
+	// Create admin service if repository is available
+	if repo != nil {
+		config.AdminService = admin.New(repo)
+	}
 
 	// Override with command-line flags if provided
 	if *mode != "stdio" {
@@ -101,7 +107,7 @@ func main() {
 
 // createService creates a simple-content service with in-memory storage
 // This is suitable for development and testing
-func createService() (simplecontent.Service, error) {
+func createService() (simplecontent.Service, simplecontent.Repository, error) {
 	// Create in-memory repository
 	repo := memoryrepo.New()
 
@@ -114,8 +120,8 @@ func createService() (simplecontent.Service, error) {
 		simplecontent.WithBlobStore("default", blobStore),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create service: %w", err)
+		return nil, nil, fmt.Errorf("failed to create service: %w", err)
 	}
 
-	return service, nil
+	return service, repo, nil
 }
