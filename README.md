@@ -15,7 +15,10 @@ This MCP server exposes all core content management operations from the `simple-
 - ✅ **4 MCP Prompts** - Workflow guidance templates
 - ✅ **Batch Operations** - Upload/fetch multiple items in parallel
 - ✅ **stdio Transport** for local agent use
-- ✅ **In-memory Storage** for testing and development
+- ✅ **HTTP Streamable Transport** - MCP 2025-06-18 compliance
+- ✅ **PostgreSQL Support** - Production-ready metadata storage
+- ✅ **Filesystem Storage** - Local file storage backend
+- ✅ **In-memory Storage** - For testing and development
 - ✅ **Type-safe** with JSON Schema validation
 - ✅ **Clean Adapter Pattern** - no modification to core library
 
@@ -294,9 +297,19 @@ config.Authenticator = auth.NewAPIKeyAuthenticator()
 - [x] Session management with `Mcp-Session-Id` header
 - [x] Origin header validation for security
 
+### Storage Backend Options
+
+The server supports multiple storage backends:
+
+1. **In-Memory** (default) - For development and testing
+2. **Filesystem** - Production-ready local storage
+3. **PostgreSQL** - Production metadata storage with filesystem/S3 blobs
+
+See [PostgreSQL Setup Guide](docs/POSTGRESQL_SETUP.md) for production deployment.
+
 ### Future Enhancements
+- [ ] S3 storage backend (requires AWS SDK)
 - [ ] Full HTTP JSON-RPC MCP protocol implementation
-- [ ] PostgreSQL and S3 storage backends (require additional dependencies)
 - [ ] OAuth integration
 - [ ] Rate limiting and quotas
 - [ ] WebSocket transport
@@ -307,6 +320,7 @@ config.Authenticator = auth.NewAPIKeyAuthenticator()
 - [simple-content](https://github.com/tendant/simple-content) v0.1.23
 - [google/uuid](https://github.com/google/uuid) v1.6.0
 - [godotenv](https://github.com/joho/godotenv) v1.5.1 - Environment configuration
+- [pgx](https://github.com/jackc/pgx) v5 - PostgreSQL driver (optional, for production)
 
 ## License
 
