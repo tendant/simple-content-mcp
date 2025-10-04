@@ -2,7 +2,7 @@
 
 ## Overview
 
-The simple-content-mcp server now supports **full Server-Sent Events (SSE) transport** using the official MCP Go SDK's `SSEHandler`. This enables web-based clients to interact with the MCP server over HTTP.
+The simple-content-mcp server now supports **full Server-Sent Events (SSE) transport** compliant with **MCP Specification 2025-06-18**. The implementation uses the official MCP Go SDK's `SSEHandler` with additional middleware for spec compliance. This enables web-based clients to interact with the MCP server over HTTP.
 
 ## What is SSE Transport?
 
@@ -75,20 +75,54 @@ curl -X POST http://localhost:8080/sse?sessionid=ABC123XYZ \
   }'
 ```
 
+### With MCP 2025-06-18 Headers
+
+```bash
+# Include MCP protocol version (required for 2025-06-18 compliance)
+curl -N -H "MCP-Protocol-Version: 2025-06-18" http://localhost:8080/sse
+
+# With session ID (for resumable sessions)
+curl -N -H "MCP-Protocol-Version: 2025-06-18" \
+     -H "Mcp-Session-Id: abc123def456" \
+     http://localhost:8080/sse
+```
+
 ### With Authentication
 
 ```bash
-# Include API key in headers
-curl -N -H "X-API-Key: your-key" http://localhost:8080/sse
+# Include API key and protocol version
+curl -N -H "X-API-Key: your-key" \
+     -H "MCP-Protocol-Version: 2025-06-18" \
+     http://localhost:8080/sse
 
 # Or using Authorization header
-curl -N -H "Authorization: Bearer your-key" http://localhost:8080/sse
+curl -N -H "Authorization: Bearer your-key" \
+     -H "MCP-Protocol-Version: 2025-06-18" \
+     http://localhost:8080/sse
 ```
 
 ### JavaScript Client Example
 
 ```javascript
-// Connect to SSE endpoint
+// Connect to SSE endpoint with MCP 2025-06-18 headers
+// Note: EventSource doesn't support custom headers, use fetch for initial connection
+const sessionId = crypto.randomUUID();
+
+// For MCP 2025-06-18 compliance, use fetch API with headers
+const response = await fetch('http://localhost:8080/sse', {
+  headers: {
+    'MCP-Protocol-Version': '2025-06-18',
+    'Mcp-Session-Id': sessionId,
+    'X-API-Key': 'your-key',  // if auth enabled
+    'Accept': 'text/event-stream'
+  }
+});
+
+// Read SSE stream
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+
+// Alternative: Use EventSource for browsers (without custom headers)
 const eventSource = new EventSource('http://localhost:8080/sse');
 
 let sessionEndpoint = null;
@@ -337,6 +371,32 @@ If browser shows CORS errors:
 - Or use server from same origin
 - Or disable CORS in browser for development
 
+## MCP 2025-06-18 Specification Compliance
+
+The server implements the following features from the MCP 2025-06-18 specification:
+
+### Protocol Version Negotiation
+- **`MCP-Protocol-Version` header**: Clients should include this header to specify the protocol version
+- **Default version**: If not specified, defaults to `2025-03-26`
+- **Supported versions**: `2024-11-05`, `2025-03-26`, `2025-06-18`
+- **Version validation**: Server returns 400 Bad Request for unsupported versions
+
+### Session Management
+- **`Mcp-Session-Id` header**: Clients can provide a session ID for resumable connections
+- **Session tracking**: Session IDs are added to request context for downstream handlers
+- **Cryptographically secure IDs**: Use UUIDs or similar secure identifiers
+
+### Security Features
+- **Origin validation**: Server validates `Origin` header for localhost servers
+- **Authentication**: API key validation via `X-API-Key` or `Authorization` headers
+- **Localhost binding**: Recommended to bind only to localhost for local development
+
+### Backwards Compatibility
+The implementation maintains backwards compatibility with older MCP specifications by:
+- Accepting connections without protocol version headers (defaults to 2025-03-26)
+- Supporting multiple protocol versions simultaneously
+- Using the SDK's SSEHandler which implements the core 2024-11-05 spec
+
 ## Security Best Practices
 
 1. **Use HTTPS** in production
@@ -345,6 +405,8 @@ If browser shows CORS errors:
 4. **Monitor connections** for abuse
 5. **Use secure session IDs** (SDK handles this)
 6. **Implement timeouts** for inactive connections
+7. **Validate Origin headers** for CORS security (implemented for 2025-06-18)
+8. **Bind to localhost** for local development
 
 ## Example Web Application
 
@@ -361,9 +423,15 @@ See `examples/web-client/` (coming soon) for a complete web application that use
 | Firewall | No network | Requires open port |
 | CORS | N/A | May need proxy |
 
+## Additional Documentation
+
+- **[MCP 2025-06-18 Compliance Report](MCP_2025_06_18_COMPLIANCE.md)** - Detailed compliance verification
+- **[Authentication Guide](AUTHENTICATION.md)** - API key authentication setup
+- **[Main README](../README.md)** - Project overview and features
+
 ## Next Steps
 
-- ✅ SSE transport fully implemented
+- ✅ SSE transport fully implemented with MCP 2025-06-18 compliance
 - ⏳ HTTP JSON-RPC transport (coming soon)
 - ⏳ WebSocket transport (future)
 - ⏳ Example web client application

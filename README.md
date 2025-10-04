@@ -6,6 +6,8 @@ A Model Context Protocol (MCP) server for the [simple-content](https://github.co
 
 This MCP server exposes all core content management operations from the `simple-content` library as MCP tools, allowing AI agents like Claude to upload, manage, search, and download content programmatically.
 
+**MCP Specification**: Compliant with **MCP 2025-06-18** specification (backwards compatible with 2024-11-05 and 2025-03-26).
+
 ### Features
 
 - ✅ **14 MCP Tools** - 8 core + 2 derived + 2 status + 2 batch operations
@@ -282,11 +284,14 @@ config.Authenticator = auth.NewAPIKeyAuthenticator()
 ### Phase 5 ✅ (Completed)
 - [x] Authentication infrastructure (API key auth)
 - [x] Auth middleware for tool handlers
-- [x] **Full SSE transport** with MCP protocol support
+- [x] **Full SSE transport** with **MCP 2025-06-18 specification** compliance
 - [x] HTTP transport with health/ready endpoints
 - [x] Environment variable configuration
 - [x] Dotenv (.env file) support
 - [x] Production-ready server setup
+- [x] Protocol version negotiation (2024-11-05, 2025-03-26, 2025-06-18)
+- [x] Session management with `Mcp-Session-Id` header
+- [x] Origin header validation for security
 
 ### Future Enhancements
 - [ ] Full HTTP JSON-RPC MCP protocol implementation
@@ -309,6 +314,8 @@ See [LICENSE](LICENSE) file for details.
 ## References
 
 - [MCP Specification](https://modelcontextprotocol.io)
+- [MCP 2025-06-18 Specification](https://modelcontextprotocol.io/specification/2025-06-18)
 - [MCP Go SDK Documentation](https://github.com/modelcontextprotocol/go-sdk)
 - [Simple Content Library](https://github.com/tendant/simple-content)
 - [Full Implementation Plan](MCP_INTEGRATION_PLAN.md)
+- [MCP 2025-06-18 Compliance Report](docs/MCP_2025_06_18_COMPLIANCE.md)

@@ -114,8 +114,49 @@ func (s *Server) serveSSE(ctx context.Context) error {
 		},
 	)
 
-	// Wrap SSE handler with auth middleware if enabled
+	// Wrap SSE handler with MCP 2025-06-18 spec compliance and auth middleware
 	mux.HandleFunc("/sse", func(w http.ResponseWriter, r *http.Request) {
+		// MCP 2025-06-18: Validate Origin header for security
+		origin := r.Header.Get("Origin")
+		if origin != "" {
+			// For localhost servers, only accept localhost origins
+			// In production, implement stricter origin validation
+			if s.config.Host == "localhost" || s.config.Host == "127.0.0.1" {
+				if !strings.HasPrefix(origin, "http://localhost") && !strings.HasPrefix(origin, "http://127.0.0.1") {
+					http.Error(w, "Invalid origin", http.StatusForbidden)
+					return
+				}
+			}
+		}
+
+		// MCP 2025-06-18: Protocol version negotiation
+		protocolVersion := r.Header.Get("MCP-Protocol-Version")
+		if protocolVersion == "" {
+			// Default to 2025-03-26 as per spec
+			protocolVersion = "2025-03-26"
+		}
+		// Validate protocol version (we support 2024-11-05 and newer)
+		supportedVersions := []string{"2024-11-05", "2025-03-26", "2025-06-18"}
+		validVersion := false
+		for _, v := range supportedVersions {
+			if protocolVersion == v {
+				validVersion = true
+				break
+			}
+		}
+		if !validVersion {
+			http.Error(w, "Unsupported MCP protocol version", http.StatusBadRequest)
+			return
+		}
+
+		// MCP 2025-06-18: Session ID handling
+		sessionID := r.Header.Get("Mcp-Session-Id")
+		if sessionID != "" {
+			// Add session ID to context for downstream handlers
+			ctx := context.WithValue(r.Context(), "mcp_session_id", sessionID)
+			r = r.WithContext(ctx)
+		}
+
 		// Extract and validate API key if auth is enabled
 		if s.config.AuthEnabled && s.config.Authenticator != nil {
 			apiKey := extractAPIKeyFromHeader(r)
@@ -136,7 +177,7 @@ func (s *Server) serveSSE(ctx context.Context) error {
 			r = r.WithContext(ctx)
 		}
 
-		log.Printf("SSE connection from %s", r.RemoteAddr)
+		log.Printf("SSE connection from %s (protocol: %s, session: %s)", r.RemoteAddr, protocolVersion, sessionID)
 		sseHandler.ServeHTTP(w, r)
 	})
 
