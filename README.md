@@ -282,16 +282,18 @@ config.Authenticator = auth.NewAPIKeyAuthenticator()
 ### Phase 5 ✅ (Completed)
 - [x] Authentication infrastructure (API key auth)
 - [x] Auth middleware for tool handlers
-- [x] SSE transport with health/ready endpoints
+- [x] **Full SSE transport** with MCP protocol support
 - [x] HTTP transport with health/ready endpoints
 - [x] Environment variable configuration
+- [x] Dotenv (.env file) support
 - [x] Production-ready server setup
 
 ### Future Enhancements
-- [ ] Full SSE/HTTP MCP protocol implementation (requires SDK support)
+- [ ] Full HTTP JSON-RPC MCP protocol implementation
 - [ ] PostgreSQL and S3 storage backends (require additional dependencies)
 - [ ] OAuth integration
 - [ ] Rate limiting and quotas
+- [ ] WebSocket transport
 
 ## Dependencies
 

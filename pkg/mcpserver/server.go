@@ -100,38 +100,44 @@ func (s *Server) serveSSE(ctx context.Context) error {
 		w.Write([]byte("READY"))
 	})
 
-	// SSE endpoint for MCP
+	// MCP SSE endpoint using official SDK SSEHandler
+	// The SSEHandler manages SSE sessions per the MCP spec
+	sseHandler := mcp.NewSSEHandler(
+		func(r *http.Request) *mcp.Server {
+			// For now, return the same server instance for all requests
+			// In production, you might want per-session servers with different contexts
+			return s.mcpServer
+		},
+		&mcp.SSEOptions{
+			// Endpoint where clients POST messages
+			// Defaults to the request URL
+		},
+	)
+
+	// Wrap SSE handler with auth middleware if enabled
 	mux.HandleFunc("/sse", func(w http.ResponseWriter, r *http.Request) {
-		// Extract API key from header if auth is enabled
-		reqCtx := r.Context()
-		if s.config.AuthEnabled {
-			apiKey := r.Header.Get("X-API-Key")
+		// Extract and validate API key if auth is enabled
+		if s.config.AuthEnabled && s.config.Authenticator != nil {
+			apiKey := extractAPIKeyFromHeader(r)
 			if apiKey == "" {
-				apiKey = r.Header.Get("Authorization")
-				// Remove "Bearer " prefix if present
-				if strings.HasPrefix(apiKey, "Bearer ") {
-					apiKey = strings.TrimPrefix(apiKey, "Bearer ")
-				}
+				http.Error(w, "API key required", http.StatusUnauthorized)
+				return
 			}
 
-			if apiKey != "" {
-				reqCtx = context.WithValue(reqCtx, "api_key", apiKey)
+			// Validate API key
+			_, err := s.config.Authenticator.Validate(r.Context(), apiKey)
+			if err != nil {
+				http.Error(w, "Invalid API key", http.StatusUnauthorized)
+				return
 			}
+
+			// Add API key to context for downstream handlers
+			ctx := context.WithValue(r.Context(), "api_key", apiKey)
+			r = r.WithContext(ctx)
 		}
 
-		// Use MCP SDK's SSE transport
-		// Note: The actual SSE implementation depends on the SDK's capabilities
-		// This is a placeholder for the SSE transport integration
 		log.Printf("SSE connection from %s", r.RemoteAddr)
-
-		w.Header().Set("Content-Type", "text/event-stream")
-		w.Header().Set("Cache-Control", "no-cache")
-		w.Header().Set("Connection", "keep-alive")
-
-		// For now, return a basic response
-		// Full implementation would use MCP SDK's SSE support
-		w.WriteHeader(http.StatusNotImplemented)
-		w.Write([]byte("SSE transport support coming soon\n"))
+		sseHandler.ServeHTTP(w, r)
 	})
 
 	// Create HTTP server
@@ -145,6 +151,7 @@ func (s *Server) serveSSE(ctx context.Context) error {
 	errChan := make(chan error, 1)
 	go func() {
 		log.Printf("Starting SSE server on %s", addr)
+		log.Printf("SSE endpoint: http://%s/sse", addr)
 		errChan <- server.ListenAndServe()
 	}()
 
@@ -230,6 +237,25 @@ func (s *Server) serveHTTP(ctx context.Context) error {
 }
 
 // Helper functions
+
+// extractAPIKeyFromHeader extracts API key from HTTP request headers
+func extractAPIKeyFromHeader(r *http.Request) string {
+	// Try X-API-Key header first
+	if apiKey := r.Header.Get("X-API-Key"); apiKey != "" {
+		return apiKey
+	}
+
+	// Try Authorization header
+	if auth := r.Header.Get("Authorization"); auth != "" {
+		// Remove "Bearer " prefix if present
+		if strings.HasPrefix(auth, "Bearer ") {
+			return strings.TrimPrefix(auth, "Bearer ")
+		}
+		return auth
+	}
+
+	return ""
+}
 
 // decodeData handles both base64 and URL data sources
 func (s *Server) decodeData(data interface{}) (io.Reader, error) {
