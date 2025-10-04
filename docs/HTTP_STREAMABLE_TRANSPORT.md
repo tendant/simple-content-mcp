@@ -1,24 +1,28 @@
-# SSE Transport Guide
+# HTTP Streamable Transport Guide (MCP 2025-06-18)
 
 ## Overview
 
-The simple-content-mcp server now supports **full Server-Sent Events (SSE) transport** compliant with **MCP Specification 2025-06-18**. The implementation uses the official MCP Go SDK's `SSEHandler` with additional middleware for spec compliance. This enables web-based clients to interact with the MCP server over HTTP.
+The simple-content-mcp server implements **HTTP Streamable transport** compliant with **MCP Specification 2025-06-18**. This transport uses Server-Sent Events (SSE) for server-to-client streaming while supporting standard HTTP for client-to-server communication. The implementation uses the official MCP Go SDK's `SSEHandler` with additional middleware for 2025-06-18 spec compliance.
 
-## What is SSE Transport?
+## What is HTTP Streamable Transport?
 
-SSE (Server-Sent Events) is a standard for pushing real-time updates from server to client over HTTP. The MCP protocol uses SSE for:
+HTTP Streamable is the modern MCP transport protocol that combines:
 
-- **Server → Client**: SSE events (streaming responses, notifications)
-- **Client → Server**: HTTP POST requests to a session endpoint
+- **Server → Client**: SSE (Server-Sent Events) for streaming responses and notifications
+- **Client → Server**: HTTP POST with JSON-RPC messages to the `/mcp` endpoint
 
-This creates a bidirectional communication channel suitable for web applications.
+The key feature is a **single MCP endpoint** (`/mcp`) that supports both:
+- **GET**: Opens an SSE stream for receiving server messages
+- **POST**: Sends JSON-RPC requests/responses (server can reply with JSON or SSE stream)
 
-## Starting the SSE Server
+This creates a bidirectional communication channel suitable for web applications, with better session management and flexibility than the older SSE-only transport.
+
+## Starting the HTTP Streamable Server
 
 ### Basic Usage
 
 ```bash
-# Start SSE server on default port (8080)
+# Start HTTP Streamable server on default port (8080)
 ./mcpserver --mode=sse
 
 # Custom port
@@ -29,6 +33,8 @@ MCP_MODE=sse
 MCP_PORT=3000
 ./mcpserver
 ```
+
+**Note**: The mode is still called `sse` for backwards compatibility, but it implements the HTTP Streamable transport from MCP 2025-06-18 spec.
 
 ### With Authentication
 
@@ -48,26 +54,27 @@ EOF
 
 ### MCP Client Connection
 
-The MCP SSE protocol works as follows:
+The HTTP Streamable protocol works as follows:
 
-1. **Client initiates**: GET request to `/sse`
-2. **Server responds**: SSE stream with session endpoint
-3. **Client POSTs**: Messages to the session endpoint
-4. **Server streams**: Responses via SSE events
+1. **Client opens stream**: GET request to `/mcp` with `Accept: text/event-stream`
+2. **Server responds**: SSE stream with session endpoint (e.g., `/mcp?sessionid=ABC123XYZ`)
+3. **Client sends messages**: POST to session endpoint with JSON-RPC messages
+4. **Server responds**: Either JSON response or SSE events (depending on message type)
 
 ### Example with curl
 
 ```bash
-# 1. Initiate SSE connection (will stream events)
-curl -N http://localhost:8080/sse
+# 1. Open SSE stream (GET to /mcp endpoint)
+curl -N -H "Accept: text/event-stream" http://localhost:8080/mcp
 
-# Server responds with:
+# Server responds with SSE events:
 # event: endpoint
-# data: /sse?sessionid=ABC123XYZ
+# data: /mcp?sessionid=ABC123XYZ
 
-# 2. In another terminal, POST to the session endpoint
-curl -X POST http://localhost:8080/sse?sessionid=ABC123XYZ \
+# 2. In another terminal, POST JSON-RPC to the session endpoint
+curl -X POST http://localhost:8080/mcp?sessionid=ABC123XYZ \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
   -d '{
     "jsonrpc": "2.0",
     "id": 1,
@@ -79,12 +86,15 @@ curl -X POST http://localhost:8080/sse?sessionid=ABC123XYZ \
 
 ```bash
 # Include MCP protocol version (required for 2025-06-18 compliance)
-curl -N -H "MCP-Protocol-Version: 2025-06-18" http://localhost:8080/sse
+curl -N -H "MCP-Protocol-Version: 2025-06-18" \
+     -H "Accept: text/event-stream" \
+     http://localhost:8080/mcp
 
 # With session ID (for resumable sessions)
 curl -N -H "MCP-Protocol-Version: 2025-06-18" \
      -H "Mcp-Session-Id: abc123def456" \
-     http://localhost:8080/sse
+     -H "Accept: text/event-stream" \
+     http://localhost:8080/mcp
 ```
 
 ### With Authentication
@@ -93,23 +103,27 @@ curl -N -H "MCP-Protocol-Version: 2025-06-18" \
 # Include API key and protocol version
 curl -N -H "X-API-Key: your-key" \
      -H "MCP-Protocol-Version: 2025-06-18" \
-     http://localhost:8080/sse
+     -H "Accept: text/event-stream" \
+     http://localhost:8080/mcp
 
 # Or using Authorization header
 curl -N -H "Authorization: Bearer your-key" \
      -H "MCP-Protocol-Version: 2025-06-18" \
-     http://localhost:8080/sse
+     -H "Accept: text/event-stream" \
+     http://localhost:8080/mcp
 ```
 
 ### JavaScript Client Example
 
 ```javascript
-// Connect to SSE endpoint with MCP 2025-06-18 headers
-// Note: EventSource doesn't support custom headers, use fetch for initial connection
+// Connect to MCP endpoint with HTTP Streamable transport
+// For MCP 2025-06-18 compliance with custom headers, use fetch API
+
 const sessionId = crypto.randomUUID();
 
-// For MCP 2025-06-18 compliance, use fetch API with headers
-const response = await fetch('http://localhost:8080/sse', {
+// Open GET request to /mcp endpoint to establish SSE stream
+const response = await fetch('http://localhost:8080/mcp', {
+  method: 'GET',
   headers: {
     'MCP-Protocol-Version': '2025-06-18',
     'Mcp-Session-Id': sessionId,
@@ -123,7 +137,8 @@ const reader = response.body.getReader();
 const decoder = new TextDecoder();
 
 // Alternative: Use EventSource for browsers (without custom headers)
-const eventSource = new EventSource('http://localhost:8080/sse');
+// Note: EventSource doesn't support custom headers
+const eventSource = new EventSource('http://localhost:8080/mcp');
 
 let sessionEndpoint = null;
 
@@ -187,12 +202,16 @@ async function uploadContent(ownerID, name, data) {
 
 ## Endpoints
 
-The SSE server exposes the following endpoints:
+The HTTP Streamable server exposes the following endpoints:
 
-### `/sse` - MCP SSE Endpoint
-- **GET**: Initiates SSE connection, returns session endpoint
-- **POST**: Sends MCP messages to active session (via session endpoint)
-- **Authentication**: X-API-Key or Authorization header
+### `/mcp` - MCP HTTP Streamable Endpoint
+- **GET**: Opens SSE stream, server returns session endpoint via SSE event
+- **POST**: Sends JSON-RPC messages to active session (via session endpoint with `?sessionid=...`)
+- **Headers**:
+  - `MCP-Protocol-Version`: Protocol version (defaults to `2025-03-26`)
+  - `Mcp-Session-Id`: Optional session ID for resumable connections
+  - `X-API-Key` or `Authorization`: API key (if auth enabled)
+  - `Accept`: Should include `text/event-stream` for GET, `application/json` or `text/event-stream` for POST
 
 ### `/health` - Health Check
 - **GET**: Returns "OK" if server is running

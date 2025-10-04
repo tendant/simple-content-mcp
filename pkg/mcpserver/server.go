@@ -84,6 +84,10 @@ func (s *Server) serveStdio(ctx context.Context) error {
 	return s.mcpServer.Run(ctx, transport)
 }
 
+// serveSSE implements HTTP Streamable transport (MCP 2025-06-18 spec)
+// Note: Despite the function name, this implements HTTP Streamable transport,
+// which uses SSE for server-to-client streaming. The /mcp endpoint handles
+// both GET (open SSE stream) and POST (send JSON-RPC messages).
 func (s *Server) serveSSE(ctx context.Context) error {
 	// Create HTTP mux
 	mux := http.NewServeMux()
@@ -100,8 +104,9 @@ func (s *Server) serveSSE(ctx context.Context) error {
 		w.Write([]byte("READY"))
 	})
 
-	// MCP SSE endpoint using official SDK SSEHandler
-	// The SSEHandler manages SSE sessions per the MCP spec
+	// MCP HTTP Streamable endpoint using official SDK SSEHandler
+	// HTTP Streamable transport uses SSE for server-to-client streaming
+	// Single /mcp endpoint supports both GET (open stream) and POST (send messages)
 	sseHandler := mcp.NewSSEHandler(
 		func(r *http.Request) *mcp.Server {
 			// For now, return the same server instance for all requests
@@ -114,8 +119,9 @@ func (s *Server) serveSSE(ctx context.Context) error {
 		},
 	)
 
-	// Wrap SSE handler with MCP 2025-06-18 spec compliance and auth middleware
-	mux.HandleFunc("/sse", func(w http.ResponseWriter, r *http.Request) {
+	// Wrap handler with MCP 2025-06-18 HTTP Streamable spec compliance
+	// Single /mcp endpoint handles both GET and POST as per spec
+	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
 		// MCP 2025-06-18: Validate Origin header for security
 		origin := r.Header.Get("Origin")
 		if origin != "" {
@@ -177,7 +183,8 @@ func (s *Server) serveSSE(ctx context.Context) error {
 			r = r.WithContext(ctx)
 		}
 
-		log.Printf("SSE connection from %s (protocol: %s, session: %s)", r.RemoteAddr, protocolVersion, sessionID)
+		log.Printf("MCP HTTP Streamable connection from %s (method: %s, protocol: %s, session: %s)",
+			r.RemoteAddr, r.Method, protocolVersion, sessionID)
 		sseHandler.ServeHTTP(w, r)
 	})
 
@@ -191,8 +198,8 @@ func (s *Server) serveSSE(ctx context.Context) error {
 	// Start server in goroutine
 	errChan := make(chan error, 1)
 	go func() {
-		log.Printf("Starting SSE server on %s", addr)
-		log.Printf("SSE endpoint: http://%s/sse", addr)
+		log.Printf("Starting HTTP Streamable server on %s", addr)
+		log.Printf("MCP endpoint: http://%s/mcp (supports GET and POST)", addr)
 		errChan <- server.ListenAndServe()
 	}()
 

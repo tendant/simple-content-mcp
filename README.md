@@ -284,7 +284,8 @@ config.Authenticator = auth.NewAPIKeyAuthenticator()
 ### Phase 5 ✅ (Completed)
 - [x] Authentication infrastructure (API key auth)
 - [x] Auth middleware for tool handlers
-- [x] **Full SSE transport** with **MCP 2025-06-18 specification** compliance
+- [x] **HTTP Streamable transport** with **MCP 2025-06-18 specification** compliance
+- [x] Single `/mcp` endpoint supporting GET and POST
 - [x] HTTP transport with health/ready endpoints
 - [x] Environment variable configuration
 - [x] Dotenv (.env file) support
