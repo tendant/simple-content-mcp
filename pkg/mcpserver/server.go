@@ -84,7 +84,18 @@ func (s *Server) Serve(ctx context.Context) error {
 
 func (s *Server) serveStdio(ctx context.Context) error {
 	transport := &mcp.StdioTransport{}
-	return s.mcpServer.Run(ctx, transport)
+
+	// The SDK's Run method should handle context cancellation
+	// but stdio transport may not properly detect it immediately.
+	// We'll run it and let the context cancellation propagate.
+	err := s.mcpServer.Run(ctx, transport)
+
+	// If context was cancelled, return nil to indicate clean shutdown
+	if err == context.Canceled || ctx.Err() == context.Canceled {
+		return nil
+	}
+
+	return err
 }
 
 // serveSSE implements HTTP Streamable transport (MCP 2025-06-18 spec)
