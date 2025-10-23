@@ -5,13 +5,12 @@
 !*.*
 # Unignore all dirs
 !*/
+
 !Makefile
 !Dockerfile
 
 
 .claude/
-
-mcpserver
 
 # Environment files (keep .env.example)
 .env
